@@ -31,8 +31,14 @@ app.use(
 );
 app.use(express.json());
 
-app.get("/api/health", (_req, res) => {
-  res.json({ success: true, status: "ok" });
+app.get("/api/health", async (_req, res) => {
+  try {
+    await connectDB();
+    res.json({ success: true, status: "ok" });
+  } catch (error) {
+    console.error("Health check failed:", error);
+    res.status(503).json({ success: false, message: "Database unavailable" });
+  }
 });
 
 app.use(async (req, res, next) => {
