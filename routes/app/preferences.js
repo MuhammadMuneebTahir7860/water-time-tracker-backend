@@ -4,6 +4,8 @@ const {
   getPreferences,
   updatePreferences,
   resetTracking,
+  updateLanguage,
+  toggleNotifications,
 } = require("../../controllers/app/preferences");
 const { protect } = require("../../middleware/appAuth");
 

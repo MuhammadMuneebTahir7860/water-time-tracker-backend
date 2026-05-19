@@ -3,9 +3,9 @@ const router = express.Router();
 const {
   getStats,
   getPlanBreakdown,
-  getSignupsChart,
   getRecentSignups,
 } = require("../../controllers/admin/dashboard");
+const { getSignupsChart } = require("../../controllers/admin/analytics");
 const { protect } = require("../../middleware/adminAuth");
 
 router.use(protect);
