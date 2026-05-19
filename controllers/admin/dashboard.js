@@ -5,10 +5,17 @@ const User = require("../../models/User");
 // @access  Private
 const getStats = async (req, res) => {
   try {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
     const totalUsers = await User.countDocuments({});
     const activeUsers = await User.countDocuments({ status: "Active" });
     const proUsers = await User.countDocuments({ plan: "Pro" });
-    
+    const activeToday = await User.countDocuments({
+      status: "Active",
+      updatedAt: { $gte: startOfToday },
+    });
+
     const users = await User.find({});
     const totalIntake = users.reduce((acc, user) => acc + user.avgIntakeMl, 0);
     const avgIntake = totalUsers > 0 ? Math.round(totalIntake / totalUsers) : 0;
@@ -18,6 +25,8 @@ const getStats = async (req, res) => {
       activeUsers,
       proUsers,
       avgIntake,
+      avgDailyIntake: avgIntake,
+      activeToday,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -49,16 +58,9 @@ const getRecentSignups = async (req, res) => {
     const users = await User.find({})
       .sort({ createdAt: -1 })
       .limit(5)
-      .select("firstName lastName email createdAt plan");
-    
-    const formattedUsers = users.map(u => ({
-        name: `${u.firstName || "App"} ${u.lastName || "User"}`.trim(),
-        email: u.email || "N/A",
-        date: u.createdAt,
-        plan: u.plan
-    }));
+      .select("userId plan status createdAt");
 
-    res.json(formattedUsers);
+    res.json(users);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
