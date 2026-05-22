@@ -19,6 +19,10 @@ const getStats = async (req, res) => {
     const users = await User.find({});
     const totalIntake = users.reduce((acc, user) => acc + user.avgIntakeMl, 0);
     const avgIntake = totalUsers > 0 ? Math.round(totalIntake / totalUsers) : 0;
+    
+    // Phase 6 Additions
+    const totalAwards = users.reduce((acc, user) => acc + (user.awards?.length || 0), 0);
+    const fcmUsers = users.filter((u) => !!u.fcmToken).length;
 
     res.json({
       totalUsers,
@@ -27,6 +31,8 @@ const getStats = async (req, res) => {
       avgIntake,
       avgDailyIntake: avgIntake,
       activeToday,
+      totalAwards,
+      fcmUsers,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -66,8 +72,50 @@ const getRecentSignups = async (req, res) => {
   }
 };
 
+// @desc    Get signups chart data
+// @route   GET /api/admin/dashboard/signups-chart
+// @access  Private
+const getSignupsChart = async (req, res) => {
+  try {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const users = await User.find({ createdAt: { $gte: sixMonthsAgo } })
+      .select("createdAt")
+      .sort({ createdAt: 1 });
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const chartData = {};
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      chartData[key] = 0;
+    }
+
+    users.forEach((user) => {
+      const d = user.createdAt;
+      const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      if (chartData[key] !== undefined) {
+        chartData[key]++;
+      }
+    });
+
+    const result = Object.entries(chartData).map(([name, signups]) => ({
+      name,
+      signups,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getStats,
   getPlanBreakdown,
+  getSignupsChart,
   getRecentSignups,
 };

@@ -65,10 +65,18 @@ app.use("/api/admin", authRoutes);
 
 // Mobile app APIs (v1)
 app.use("/v1/auth", require("./routes/app/auth"));
+app.use("/v1/user/profile", require("./routes/app/profile"));
 app.use("/v1/user/hydration", require("./routes/app/hydration"));
 app.use("/v1/user/stats", require("./routes/app/stats"));
 app.use("/v1/user/preferences", require("./routes/app/preferences"));
 app.use("/v1/user/reminders", require("./routes/app/reminders"));
 app.use("/v1/user/subscription", require("./routes/app/subscription"));
+app.use("/v1/user/awards", require("./routes/app/awards"));
+app.use("/v1/feedback", require("./routes/app/feedback"));
+
+// Direct support for DELETE /v1/user/account
+const { deleteAccount } = require("./controllers/app/profile");
+const { protect } = require("./middleware/appAuth");
+app.delete("/v1/user/account", protect, deleteAccount);
 
 module.exports = app;

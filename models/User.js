@@ -41,6 +41,41 @@ const UserSchema = new mongoose.Schema({
   trialEndsAt: { type: Date },
   renewsAt: { type: Date },
   pushNotificationsEnabled: { type: Boolean, default: true },
+
+  // Phase 2 - Onboarding & user info
+  gender: { type: String, default: "" },
+  age: { type: Number, default: 0 },
+  weight: { type: Number, default: 70 },
+  climate: { type: String, default: "temperate" },
+  activityLevel: { type: String, default: "moderate" },
+  isMl: { type: Boolean, default: true },
+  isKg: { type: Boolean, default: true },
+  name: { type: String, default: "" },
+
+  // Push notification fields
+  fcmToken: { type: String, default: "" },
+  timezoneOffset: { type: Number, default: 0 },
+  lastNotificationSentAt: { type: Date },
+
+  // Streak tracking
+  lastStreakDate: { type: String, default: "" },
+
+  // Awards system
+  awards: [{ type: String }],
+  celebratedAwards: [{ type: String }],
+
+  // Premium status
+  isPremium: { type: Boolean, default: false },
+
+  // Phase 7 — Geo-localization & Analytics
+  countryCode: { type: String, default: "" },
+  ipAddress: { type: String, default: "" },
+  referralCode: { type: String, unique: true, sparse: true },
+  referredBy: { type: String, default: "" },
+  milestones: [{
+    name: { type: String },
+    achievedAt: { type: Date, default: Date.now },
+  }],
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);

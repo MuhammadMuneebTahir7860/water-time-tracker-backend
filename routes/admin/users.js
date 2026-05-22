@@ -6,6 +6,7 @@ const {
   updateUser,
   updateUserStatus,
   deleteUser,
+  getUserHydrationLogs,
 } = require("../../controllers/admin/users");
 const { protect } = require("../../middleware/adminAuth");
 
@@ -13,6 +14,7 @@ router.use(protect);
 
 router.get("/", getUsers);
 router.get("/:id", getUserById);
+router.get("/:id/hydration-logs", getUserHydrationLogs);
 router.put("/:id", updateUser);
 router.put("/:id/status", updateUserStatus);
 router.delete("/:id", deleteUser);

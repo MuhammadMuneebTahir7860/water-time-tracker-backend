@@ -1,4 +1,5 @@
 const User = require("../../models/User");
+const HydrationLog = require("../../models/HydrationLog");
 
 // @desc    Get all users
 // @route   GET /api/admin/users
@@ -67,10 +68,23 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
+// @desc    Get user hydration logs
+// @route   GET /api/admin/users/:id/hydration-logs
+// @access  Private (Admin)
+const getUserHydrationLogs = async (req, res) => {
+  try {
+    const logs = await HydrationLog.find({ userId: req.params.id }).sort({ logged_at: -1 });
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getUsers,
   getUserById,
   updateUser,
   updateUserStatus,
   deleteUser,
+  getUserHydrationLogs,
 };

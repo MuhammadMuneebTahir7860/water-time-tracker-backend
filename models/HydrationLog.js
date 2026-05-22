@@ -9,7 +9,6 @@ const DrinkLogSchema = new mongoose.Schema({
   drink_type: {
     type: String,
     required: true,
-    enum: ["water", "coffee", "tea", "juice", "other"],
   },
   amount_ml: {
     type: Number,
@@ -21,6 +20,16 @@ const DrinkLogSchema = new mongoose.Schema({
   logged_at: {
     type: Date,
     default: Date.now,
+  },
+  currentIntakeAtTime: {
+    type: Number,
+  },
+  targetIntakeAtTime: {
+    type: Number,
+  },
+  isMl: {
+    type: Boolean,
+    default: true,
   },
 });
 

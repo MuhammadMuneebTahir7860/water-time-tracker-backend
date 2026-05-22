@@ -119,8 +119,8 @@ const updateLanguage = async (req, res) => {
   try {
     const { language } = req.body;
 
-    if (!["en", "tr"].includes(language)) {
-      return res.status(400).json({ success: false, message: "Invalid language. Use 'en' or 'tr'" });
+    if (!["en", "tr", "es", "de", "fr", "hi", "fa", "ar"].includes(language)) {
+      return res.status(400).json({ success: false, message: "Invalid language." });
     }
 
     const user = await User.findByIdAndUpdate(
