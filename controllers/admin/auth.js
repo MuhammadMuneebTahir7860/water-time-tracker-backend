@@ -9,7 +9,7 @@ const login = async (req, res) => {
 
   try {
     const admin = await Admin.findOne({
-      email: email?.toLowerCase().trim(),
+      email: email?.trim(),
     });
     if (!admin) {
       return res.status(401).json({ success: false, message: "Invalid email or password" });

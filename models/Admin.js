@@ -8,7 +8,7 @@ const AdminSchema = new mongoose.Schema(
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     name: { type: String }, // Keep for compatibility or derive
-    role: { type: String, default: "admin" },
+    role: { type: String, default: "Admin" },
     avatar: { type: String, default: "" },
     notificationSettings: {
       securityAlerts: { type: Boolean, default: true },

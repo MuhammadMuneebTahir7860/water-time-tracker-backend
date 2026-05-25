@@ -31,13 +31,51 @@ const getSubscriptionStats = async (req, res) => {
   }
 };
 
-// @desc    Get all subscriptions (Pro users)
-// @route   GET /api/admin/subscriptions
+// @desc    Get all subscriptions (Pro users, paginated)
+// @route   GET /api/admin/subscriptions?page=1&limit=10&search=&status=
 // @access  Private
 const getSubscriptions = async (req, res) => {
   try {
-    const proUsers = await User.find({ plan: "Pro" }).sort({ createdAt: -1 });
-    res.json(proUsers);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search?.trim() || "";
+    const status = req.query.status || "";
+
+    const query = { plan: "Pro" };
+    if (search) query.userId = { $regex: search, $options: "i" };
+
+    // status filter is derived from renewsAt on the backend
+    const today = new Date();
+    if (status === "Active") {
+      query.$or = [{ renewsAt: { $gte: today } }, { renewsAt: { $exists: false } }];
+    } else if (status === "Expired") {
+      query.renewsAt = { $lt: today };
+    }
+
+    const [proUsers, total] = await Promise.all([
+      User.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      User.countDocuments(query),
+    ]);
+
+    // Enrich with subStatus and renewal date
+    const enriched = proUsers.map((u) => {
+      const renewsAt = u.renewsAt || (() => {
+        const d = new Date(u.createdAt);
+        d.setFullYear(d.getFullYear() + 1);
+        return d;
+      })();
+      const subStatus = new Date(renewsAt) < today ? "Expired" : "Active";
+      return { ...u.toObject(), renewal: renewsAt, subStatus };
+    });
+
+    res.json({
+      data: enriched,
+      total,
+      page,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -1,13 +1,43 @@
 const User = require("../../models/User");
 const HydrationLog = require("../../models/HydrationLog");
 
-// @desc    Get all users
-// @route   GET /api/admin/users
+// @desc    Get all users (paginated, filterable, sortable)
+// @route   GET /api/admin/users?page=1&limit=10&search=&plan=&status=&sort=createdAt&sortDir=desc
 // @access  Private (Admin)
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find({}).sort({ createdAt: -1 });
-    res.json(users);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search?.trim() || "";
+    const plan = req.query.plan || "";
+    const status = req.query.status || "";
+    const sort = req.query.sort || "createdAt";
+    const sortDir = req.query.sortDir === "asc" ? 1 : -1;
+
+    const ALLOWED_SORTS = ["userId", "plan", "status", "createdAt", "avgIntakeMl"];
+    const sortField = ALLOWED_SORTS.includes(sort) ? sort : "createdAt";
+
+    const query = {};
+    if (search) query.userId = { $regex: search, $options: "i" };
+    if (plan && plan !== "all") query.plan = plan;
+    if (status && status !== "all") query.status = status;
+
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .sort({ [sortField]: sortDir })
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments(query),
+    ]);
+
+    res.json({
+      data: users,
+      total,
+      page,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

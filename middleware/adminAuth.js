@@ -9,7 +9,7 @@ const protect = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       // Ensure it's an admin token
-      if (!decoded.role || (decoded.role !== "Admin" && decoded.role !== "SuperAdmin")) {
+      if (!decoded.role || (decoded.role !== "Admin" && decoded.role !== "SuperAdmin" && decoded.role !== "Super Admin")) {
         return res.status(401).json({ success: false, message: "Not authorized as admin" });
       }
 
