@@ -153,6 +153,7 @@ const getTodayHydration = async (req, res) => {
         total_intake_ml: totalIntake,
         daily_goal_ml: goalMl,
         completion_percentage: Math.min(completionPercentage, 100),
+        streak: user.streak || 0,
         drink_log: logs.map((log) => ({
           id: log._id,
           drink_type: log.drink_type,

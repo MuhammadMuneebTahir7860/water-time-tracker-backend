@@ -128,7 +128,17 @@ const registerDevice = async (req, res) => {
           wakeUpTime: (preferences && preferences.wakeUpTime) ? preferences.wakeUpTime : "07:00",
           bedTime: (preferences && preferences.bedTime) ? preferences.bedTime : "22:00",
         },
-        reminders: reminders || [],
+        reminders: (reminders && reminders.length > 0)
+          ? reminders
+          : [
+              {
+                startTime: "08:00",
+                endTime: "22:00",
+                intervalMinutes: 120,
+                isCustom: false,
+                enabled: true,
+              },
+            ],
         referralCode,
         referredBy: referredBy || "",
       });

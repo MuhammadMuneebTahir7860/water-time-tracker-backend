@@ -28,8 +28,9 @@ const getWeeklyStats = async (req, res) => {
       logged_at: { $gte: start, $lte: end },
     });
 
-    const days = [];
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const daily_breakdown = [];
+    let totalIntake = 0;
+    let completedDays = 0;
 
     for (let i = 0; i < 7; i++) {
       const d = new Date(start);
@@ -37,24 +38,32 @@ const getWeeklyStats = async (req, res) => {
       const dateStr = d.toISOString().split("T")[0];
       
       const dayLogs = logs.filter(l => l.logged_at.toISOString().split("T")[0] === dateStr);
-      const total_ml = dayLogs.reduce((acc, l) => acc + l.amount_ml, 0);
+      const intake_ml = dayLogs.reduce((acc, l) => acc + l.amount_ml, 0);
       const goal_ml = user.goalMl;
-      const completion_pct = Math.round((total_ml / goal_ml) * 100);
+      const completed = intake_ml >= goal_ml;
 
-      days.push({
-        day: dayNames[d.getDay()],
+      if (completed) {
+        completedDays++;
+      }
+      totalIntake += intake_ml;
+
+      daily_breakdown.push({
         date: dateStr,
-        total_ml,
+        intake_ml,
         goal_ml,
-        completion_pct: Math.min(completion_pct, 100),
+        completed,
       });
     }
+
+    const average_intake_ml = Math.round(totalIntake / 7);
+    const completion_rate = Math.round((completedDays / 7) * 100);
 
     res.json({
       success: true,
       data: {
-        period: `${start.toISOString().split("T")[0]} to ${end.toISOString().split("T")[0]}`,
-        days,
+        average_intake_ml,
+        completion_rate,
+        daily_breakdown,
       },
     });
   } catch (error) {
@@ -78,31 +87,55 @@ const getMonthlyStats = async (req, res) => {
       logged_at: { $gte: start, $lte: end },
     });
 
-    const days = [];
     const lastDay = end.getDate();
+    const daily_breakdown = [];
+    let totalIntake = 0;
+    let completedDays = 0;
 
-    for (let i = 1; i <= lastDay; i++) {
-      const d = new Date(start.getFullYear(), start.getMonth(), i);
+    const dailyIntake = {};
+    for (let day = 1; day <= lastDay; day++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), day);
       const dateStr = d.toISOString().split("T")[0];
-      
       const dayLogs = logs.filter(l => l.logged_at.toISOString().split("T")[0] === dateStr);
-      const total_ml = dayLogs.reduce((acc, l) => acc + l.amount_ml, 0);
-      const goal_ml = user.goalMl;
-      const completion_pct = Math.round((total_ml / goal_ml) * 100);
+      const amount = dayLogs.reduce((acc, l) => acc + l.amount_ml, 0);
+      dailyIntake[day] = amount;
+      totalIntake += amount;
+      if (amount >= user.goalMl) {
+        completedDays++;
+      }
+    }
 
-      days.push({
+    for (let i = 0; i < 4; i++) {
+      const startDay = i * 7 + 1;
+      const endDay = i === 3 ? lastDay : (i + 1) * 7;
+      const daysInWeek = endDay - startDay + 1;
+
+      let weekIntakeSum = 0;
+      for (let day = startDay; day <= endDay; day++) {
+        weekIntakeSum += dailyIntake[day];
+      }
+
+      const avgIntake = Math.round(weekIntakeSum / daysInWeek);
+      const weekStartDate = new Date(start.getFullYear(), start.getMonth(), startDay);
+      const dateStr = weekStartDate.toISOString().split("T")[0];
+
+      daily_breakdown.push({
         date: dateStr,
-        total_ml,
-        goal_ml,
-        completion_pct: Math.min(completion_pct, 100),
+        intake_ml: avgIntake,
+        goal_ml: user.goalMl,
+        completed: avgIntake >= user.goalMl,
       });
     }
+
+    const average_intake_ml = Math.round(totalIntake / lastDay);
+    const completion_rate = Math.round((completedDays / lastDay) * 100);
 
     res.json({
       success: true,
       data: {
-        period: `${start.toLocaleString("default", { month: "long" })} ${start.getFullYear()}`,
-        days,
+        average_intake_ml,
+        completion_rate,
+        daily_breakdown,
       },
     });
   } catch (error) {
@@ -117,33 +150,64 @@ const getYearlyStats = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     const targetDate = req.query.date ? new Date(req.query.date) : new Date();
-    const year = targetDate.getFullYear();
-    const start = new Date(year, 0, 1);
-    const end = new Date(year, 11, 31, 23, 59, 59, 999);
+
+    const start = new Date(targetDate.getFullYear(), targetDate.getMonth() - 5, 1, 0, 0, 0, 0);
+    const end = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
     const logs = await HydrationLog.find({
       userId: req.user.id,
       logged_at: { $gte: start, $lte: end },
     });
 
-    const months = [];
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const daily_breakdown = [];
+    let totalIntake = 0;
+    let completedDays = 0;
+    let totalDays = 0;
 
-    for (let i = 0; i < 12; i++) {
-      const monthLogs = logs.filter(l => l.logged_at.getMonth() === i);
-      const total_ml = monthLogs.reduce((acc, l) => acc + l.amount_ml, 0);
-      
-      months.push({
-        month: monthNames[i],
-        total_ml,
+    for (let i = 0; i < 6; i++) {
+      const mDate = new Date(start.getFullYear(), start.getMonth() + i, 1);
+      const mYear = mDate.getFullYear();
+      const mMonth = mDate.getMonth();
+
+      const lastDayOfMonth = new Date(mYear, mMonth + 1, 0).getDate();
+      let monthIntakeSum = 0;
+      let monthDays = lastDayOfMonth;
+
+      for (let d = 1; d <= lastDayOfMonth; d++) {
+        const currentDate = new Date(mYear, mMonth, d);
+        const dateStr = currentDate.toISOString().split("T")[0];
+        const dayLogs = logs.filter(l => l.logged_at.toISOString().split("T")[0] === dateStr);
+        const dayIntake = dayLogs.reduce((acc, l) => acc + l.amount_ml, 0);
+
+        monthIntakeSum += dayIntake;
+        totalIntake += dayIntake;
+        totalDays++;
+
+        if (dayIntake >= user.goalMl) {
+          completedDays++;
+        }
+      }
+
+      const avgIntake = Math.round(monthIntakeSum / monthDays);
+      const dateStr = mDate.toISOString().split("T")[0];
+
+      daily_breakdown.push({
+        date: dateStr,
+        intake_ml: avgIntake,
+        goal_ml: user.goalMl,
+        completed: avgIntake >= user.goalMl,
       });
     }
+
+    const average_intake_ml = totalDays > 0 ? Math.round(totalIntake / totalDays) : 0;
+    const completion_rate = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
 
     res.json({
       success: true,
       data: {
-        period: year.toString(),
-        months,
+        average_intake_ml,
+        completion_rate,
+        daily_breakdown,
       },
     });
   } catch (error) {
