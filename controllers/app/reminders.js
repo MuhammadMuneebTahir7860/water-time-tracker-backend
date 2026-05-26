@@ -19,6 +19,7 @@ const getReminders = async (req, res) => {
             start_time: r.startTime,
             end_time: r.endTime,
             interval_minutes: r.intervalMinutes,
+            is_custom: r.isCustom || false,
             is_enabled: r.enabled
         })),
       },
@@ -33,10 +34,16 @@ const getReminders = async (req, res) => {
 // @access  Private
 const createReminder = async (req, res) => {
   try {
-    const { start_time, end_time, interval_minutes } = req.body;
+    const { start_time, end_time, interval_minutes, is_custom } = req.body;
 
-    if (!start_time || !end_time) {
-      return res.status(400).json({ success: false, message: "Start and end times are required" });
+    if (!start_time) {
+      return res.status(400).json({ success: false, message: "Start time is required" });
+    }
+
+    const isCustomReminder = is_custom === true || !end_time;
+
+    if (!isCustomReminder && !end_time) {
+      return res.status(400).json({ success: false, message: "End time is required for standard reminders" });
     }
 
     const user = await User.findById(req.user.id);
@@ -46,8 +53,9 @@ const createReminder = async (req, res) => {
 
     const newReminder = {
       startTime: start_time,
-      endTime: end_time,
-      intervalMinutes: interval_minutes || 120,
+      endTime: isCustomReminder ? "" : end_time,
+      intervalMinutes: isCustomReminder ? null : (interval_minutes || 120),
+      isCustom: isCustomReminder,
       enabled: true,
     };
 
@@ -57,7 +65,14 @@ const createReminder = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Reminder created successfully",
-      data: user.reminders[user.reminders.length - 1],
+      data: {
+        id: user.reminders[user.reminders.length - 1]._id,
+        start_time: user.reminders[user.reminders.length - 1].startTime,
+        end_time: user.reminders[user.reminders.length - 1].endTime,
+        interval_minutes: user.reminders[user.reminders.length - 1].intervalMinutes,
+        is_custom: user.reminders[user.reminders.length - 1].isCustom,
+        is_enabled: user.reminders[user.reminders.length - 1].enabled,
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -69,7 +84,7 @@ const createReminder = async (req, res) => {
 // @access  Private
 const updateReminder = async (req, res) => {
   try {
-    const { start_time, end_time, interval_minutes, enabled } = req.body;
+    const { start_time, end_time, interval_minutes, is_custom, enabled } = req.body;
     const user = await User.findById(req.user.id);
 
     if (!user) {
@@ -82,8 +97,9 @@ const updateReminder = async (req, res) => {
     }
 
     if (start_time) reminder.startTime = start_time;
-    if (end_time) reminder.endTime = end_time;
-    if (interval_minutes) reminder.intervalMinutes = interval_minutes;
+    if (end_time !== undefined) reminder.endTime = end_time;
+    if (interval_minutes !== undefined) reminder.intervalMinutes = interval_minutes;
+    if (is_custom !== undefined) reminder.isCustom = is_custom;
     if (enabled !== undefined) reminder.enabled = enabled;
 
     await user.save();
@@ -91,7 +107,14 @@ const updateReminder = async (req, res) => {
     res.json({
       success: true,
       message: "Reminder updated successfully",
-      data: reminder,
+      data: {
+        id: reminder._id,
+        start_time: reminder.startTime,
+        end_time: reminder.endTime,
+        interval_minutes: reminder.intervalMinutes,
+        is_custom: reminder.isCustom,
+        is_enabled: reminder.enabled,
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

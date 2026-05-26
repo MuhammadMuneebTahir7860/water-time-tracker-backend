@@ -32,8 +32,9 @@ const UserSchema = new mongoose.Schema({
   },
   reminders: [{
     startTime: { type: String, required: true },
-    endTime: { type: String, required: true },
-    intervalMinutes: { type: Number, default: 120 },
+    endTime: { type: String },
+    intervalMinutes: { type: Number },
+    isCustom: { type: Boolean, default: false },
     enabled: { type: Boolean, default: true },
   }],
   globalReminderEnabled: { type: Boolean, default: true },
