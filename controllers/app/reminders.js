@@ -51,10 +51,36 @@ const createReminder = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
+    const intervalVal = isCustomReminder ? null : (interval_minutes || 120);
+    const endVal = isCustomReminder ? "" : end_time;
+
+    // Check for duplicate reminder to prevent multiple identical records (e.g., on app reinstall)
+    const existingReminder = user.reminders.find(r => 
+      r.startTime === start_time && 
+      r.endTime === endVal && 
+      r.intervalMinutes === intervalVal &&
+      r.isCustom === isCustomReminder
+    );
+
+    if (existingReminder) {
+      return res.status(200).json({
+        success: true,
+        message: "Reminder already exists",
+        data: {
+          id: existingReminder._id,
+          start_time: existingReminder.startTime,
+          end_time: existingReminder.endTime,
+          interval_minutes: existingReminder.intervalMinutes,
+          is_custom: existingReminder.isCustom,
+          is_enabled: existingReminder.enabled,
+        },
+      });
+    }
+
     const newReminder = {
       startTime: start_time,
-      endTime: isCustomReminder ? "" : end_time,
-      intervalMinutes: isCustomReminder ? null : (interval_minutes || 120),
+      endTime: endVal,
+      intervalMinutes: intervalVal,
       isCustom: isCustomReminder,
       enabled: true,
     };
@@ -149,6 +175,49 @@ const deleteReminder = async (req, res) => {
   }
 };
 
+// @desc    Update global reminder switch (master on/off for all reminders)
+// @route   PUT /v1/user/reminders
+// @access  Private
+const updateGlobalReminder = async (req, res) => {
+  try {
+    const { global_enabled } = req.body;
+
+    if (global_enabled === undefined || global_enabled === null) {
+      return res.status(400).json({
+        success: false,
+        message: "global_enabled field is required (true or false)",
+      });
+    }
+
+    if (typeof global_enabled !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "global_enabled must be a boolean",
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { globalReminderEnabled: global_enabled },
+      { returnDocument: "after", runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      message: `Global reminders ${global_enabled ? "enabled" : "disabled"} successfully`,
+      data: {
+        global_enabled: user.globalReminderEnabled,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Toggle a reminder
 // @route   PUT /v1/user/reminders/:id/toggle
 // @access  Private
@@ -184,4 +253,5 @@ module.exports = {
   updateReminder,
   deleteReminder,
   toggleReminder,
+  updateGlobalReminder,
 };

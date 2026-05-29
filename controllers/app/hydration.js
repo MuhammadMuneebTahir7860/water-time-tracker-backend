@@ -127,6 +127,10 @@ const recalculateUserStats = async (userId) => {
 // @access  Private
 const getTodayHydration = async (req, res) => {
   try {
+    // Always recalculate streak from full history before responding
+    await recalculateUserStats(req.user.id);
+
+    // Re-fetch user so streak reflects the latest recalculated value
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -339,6 +343,9 @@ const getHydrationHistory = async (req, res) => {
 // @access  Private
 const getStreak = async (req, res) => {
   try {
+    // Recalculate from full history so the value is always accurate
+    await recalculateUserStats(req.user.id);
+
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
