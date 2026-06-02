@@ -15,4 +15,8 @@ const startServer = async () => {
   }
 };
 
-startServer();
+const { startNotificationScheduler } = require('./services/notificationScheduler');
+
+startServer().then(() => {
+  startNotificationScheduler();
+});

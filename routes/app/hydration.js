@@ -19,6 +19,7 @@ router.use(protect);
 // Hydration endpoints
 router.get("/today", getTodayHydration);
 router.post("/log", logDrink);
+router.post("/", logDrink);
 router.delete("/log/:id", deleteDrinkLog);
 router.put("/goal", updateGoal);
 router.get("/history", getHydrationHistory);
