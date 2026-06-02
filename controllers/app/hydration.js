@@ -180,7 +180,7 @@ const getTodayHydration = async (req, res) => {
 // @access  Private
 const logDrink = async (req, res) => {
   try {
-    const {
+    let {
       drink_type,
       amount_ml,
       cup_size_ml,
@@ -189,6 +189,10 @@ const logDrink = async (req, res) => {
       targetIntakeAtTime,
       isMl,
     } = req.body;
+
+    // Support fallback parameter names sent by mobile action handlers
+    if (!drink_type && req.body.type) drink_type = req.body.type;
+    if (!amount_ml && req.body.amount) amount_ml = req.body.amount;
 
     if (!drink_type || !amount_ml) {
       return res.status(400).json({ success: false, message: "Drink type and amount are required" });

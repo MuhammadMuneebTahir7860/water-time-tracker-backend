@@ -4,6 +4,7 @@ const {
   getLogs,
   getNotificationStats,
   updateNotificationSettings,
+  sendManualNotification,
 } = require("../../controllers/admin/notifications");
 
 
@@ -14,5 +15,6 @@ router.use(protect);
 router.get("/logs", getLogs);
 router.get("/stats", getNotificationStats);
 router.put("/settings", updateNotificationSettings);
+router.post("/send", sendManualNotification);
 
 module.exports = router;
